@@ -103,23 +103,23 @@ impl Ollama {
         mut request: ChatMessageRequest,
         id: String,
     ) -> crate::error::Result<ChatMessageResponse> {
+        
         let mut current_chat_messages = self.get_chat_messages_by_id(id.clone());
 
-        if let Some(message) = request.messages.first() {
-            current_chat_messages.push(message.clone());
-        }
+        // Append All messages from the request to the current chat messages
+        current_chat_messages.extend(request.messages.iter().cloned());
 
-        // The request is modified to include the current chat messages
-        request.messages.clone_from(&current_chat_messages);
+        // Update the request with the current chat messages
+        request.messages = current_chat_messages.clone();
 
         let result = self.send_chat_messages(request.clone()).await;
 
         if let Ok(result) = result {
-            // Message we sent to AI
-            if let Some(message) = request.messages.last() {
+            // Store each message we sent to AI
+            for message in request.messages {
                 self.store_chat_message_by_id(id.clone(), message.clone());
             }
-            // AI's response store in the history
+            // Store AI's response in the history
             self.store_chat_message_by_id(id, result.message.clone().unwrap());
 
             return Ok(result);
